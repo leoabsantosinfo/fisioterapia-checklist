@@ -4,7 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Checklist Fisioterapia - Platô Tibial (sem carga)</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.31.0/dist/supabase.min.js"></script>
   <style>
     :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;}
     body{max-width:900px;margin:24px auto;padding:18px;border-radius:10px;background:#fbfbfc;color:#111}
@@ -45,24 +44,18 @@
 
     <div class="actions">
       <button id="clear">Limpar marcações do dia</button>
-      <button id="saveServer" class="primary">Salvar no servidor</button>
       <button id="export">Exportar JSON</button>
-      <button id="print">Imprimir</button>
+      <button id="print" class="primary">Imprimir</button>
     </div>
 
     <div style="margin-top:12px">
       <div class="progress"><div id="bar" class="bar"></div></div>
     </div>
 
-    <footer>Os dados são salvos localmente no navegador e podem ser sincronizados com o servidor Supabase.</footer>
+    <footer>Os dados são salvos localmente no seu navegador (localStorage).</footer>
   </div>
 
   <script>
-    // Supabase config
-    const SUPABASE_URL = 'https://cnxnucmsrhpxnljdnhkb.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNueG51Y21zcmhweG5samRuaGtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4Mjc1MDYsImV4cCI6MjA3NDQwMzUwNn0.dFauZywzE_ZH5VKrD5y78rDGczOlO6NK1rySWCk12OQ';
-    const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
     const exercises = [
       {periodo:"Manhã", lista:[
         {key:"manha_mov_tornozelo", nome:"Mobilidade tornozelo (20 rep)", desc:"Mover o pé para cima e para baixo suavemente.", img:"1.png"},
@@ -89,7 +82,6 @@
     const clearBtn = document.getElementById('clear');
     const exportBtn = document.getElementById('export');
     const printBtn = document.getElementById('print');
-    const saveServerBtn = document.getElementById('saveServer');
     const container = document.getElementById('exercise-container');
     const countSpan = document.getElementById('count');
     const totalSpan = document.getElementById('total');
@@ -141,7 +133,6 @@
         cb.checked = !!saved[cb.dataset.key];
       });
       updateProgress();
-      loadFromSupabase(date); // carrega dados do servidor
     }
 
     function saveForDate(date){
@@ -159,45 +150,6 @@
       countSpan.textContent = done;
       totalSpan.textContent = total;
       bar.style.width = Math.round((done/total)*100) + '%';
-    }
-
-    // Salvar no Supabase
-    async function saveToSupabase(date){
-      const key = 'fisio_' + date;
-      const saved = JSON.parse(localStorage.getItem(key) || '{}');
-
-      const { data: existing } = await supabase
-        .from('exercicios')
-        .select('id')
-        .eq('data', date)
-        .limit(1);
-
-      if(existing.length > 0){
-        await supabase
-          .from('exercicios')
-          .update({ json_data: saved })
-          .eq('data', date);
-      } else {
-        await supabase
-          .from('exercicios')
-          .insert([{ data: date, json_data: saved }]);
-      }
-      alert('Progresso salvo no servidor!');
-    }
-
-    async function loadFromSupabase(date){
-      const { data } = await supabase
-        .from('exercicios')
-        .select('json_data')
-        .eq('data', date)
-        .limit(1);
-      if(data.length > 0){
-        const saved = data[0].json_data;
-        document.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
-          cb.checked = !!saved[cb.dataset.key];
-        });
-      }
-      updateProgress();
     }
 
     // Eventos
@@ -231,7 +183,6 @@
     });
 
     printBtn.addEventListener('click', ()=> window.print());
-    saveServerBtn.addEventListener('click', ()=> saveToSupabase(dateInput.value));
 
     // Inicialização
     renderExercises();
