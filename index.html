@@ -1,193 +1,285 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Checklist Fisioterapia - Platô Tibial (sem carga)</title>
-  <style>
-    :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;}
-    body{max-width:900px;margin:24px auto;padding:18px;border-radius:10px;background:#fbfbfc;color:#111}
-    h1,h2{margin:6px 0}
-    .card{background:#fff;border:1px solid #e6e6e9;padding:14px;border-radius:10px;margin:10px 0;box-shadow:0 6px 18px rgba(20,20,40,0.03)}
-    .row{display:flex;gap:8px;align-items:center}
-    .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
-    label{display:flex;gap:10px;align-items:center;cursor:pointer}
-    input[type='checkbox']{width:18px;height:18px}
-    button{padding:8px 12px;border-radius:8px;border:1px solid #ccc;background:#f5f5f7;cursor:pointer}
-    .primary{background:#0077cc;color:white;border-color:#0077cc}
-    .muted{color:#555;font-size:0.95rem}
-    .small{font-size:0.9rem}
-    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-    .progress{height:12px;background:#eee;border-radius:8px;overflow:hidden}
-    .bar{height:100%;background:linear-gradient(90deg,#6bc8a4,#2a9df4);width:0}
-    footer{margin-top:14px;font-size:0.85rem;color:#666}
-    .exercise-info{display:none;margin-top:6px;font-size:0.9rem;color:#333}
-    .exercise-info img{max-width:100%;border-radius:8px;margin-top:6px}
-  </style>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Checklist Fisioterapia - Platô Tibial (sem carga)</title>
+    <style>
+        :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;}
+        body{max-width:900px;margin:24px auto;padding:18px;border-radius:10px;background:#fbfbfc;color:#111}
+        h1,h2{margin:6px 0}
+        .card{background:#fff;border:1px solid #e6e6e9;padding:14px;border-radius:10px;margin:10px 0;box-shadow:0 6px 18px rgba(20,20,40,0.03)}
+        .row{display:flex;gap:8px;align-items:center}
+        .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+        label{display:flex;gap:10px;align-items:center;cursor:pointer}
+        input[type='checkbox']{width:18px;height:18px}
+        button{padding:8px 12px;border-radius:8px;border:1px solid #ccc;background:#f5f5f7;cursor:pointer}
+        .primary{background:#0077cc;color:white;border-color:#0077cc}
+        .muted{color:#555;font-size:0.95rem}
+        .small{font-size:0.9rem}
+        .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+        .progress{height:12px;background:#eee;border-radius:8px;overflow:hidden}
+        .bar{height:100%;background:linear-gradient(90deg,#6bc8a4,#2a9df4);width:0}
+        footer{margin-top:14px;font-size:0.85rem;color:#666}
+        .exercise-info{display:none;margin-top:6px;font-size:0.9rem;color:#333}
+        .exercise-info img{max-width:100%;border-radius:8px;margin-top:6px}
+    </style>
 </head>
 <body>
-  <h1>Checklist Diário - Fisioterapia (sem carga)</h1>
-  <p class="muted">Registre os exercícios conforme o plano inicial até avaliação com o fisioterapeuta. Clique no nome do exercício para ver explicação e imagem.</p>
+    <h1>Checklist Diário - Fisioterapia (sem carga)</h1>
+    <p class="muted">Registre os exercícios conforme o plano inicial até avaliação com o fisioterapeuta. Clique no nome do exercício para ver explicação e imagem.</p>
 
-  <div class="card">
-    <div class="row">
-      <label for="date">Data:</label>
-      <input id="date" type="date" />
-      <button id="prev">←</button>
-      <button id="next">→</button>
-      <div style="margin-left:auto" class="small">Progresso do dia: <span id="count">0</span>/<span id="total">0</span></div>
+    <div class="card">
+        <div class="row">
+            <label for="date">Data:</label>
+            <input id="date" type="date" />
+            <button id="prev">←</button>
+            <button id="next">→</button>
+            <div style="margin-left:auto" class="small">Progresso do dia: <span id="count">0</span>/<span id="total">0</span></div>
+        </div>
+
+        <hr />
+
+        <div id="exercise-container" class="cols"></div>
+
+        <div class="actions">
+            <button id="clear">Limpar marcações do dia</button>
+            <button id="saveServer" class="primary">Salvar no servidor</button>
+            <button id="export">Exportar JSON</button>
+            <button id="print">Imprimir</button>
+        </div>
+
+        <div style="margin-top:12px">
+            <div class="progress"><div id="bar" class="bar"></div></div>
+        </div>
+
+        <footer>Os dados são salvos localmente no navegador e podem ser sincronizados com o servidor Supabase.</footer>
     </div>
 
-    <hr />
+    <script>
+        // Função para carregar um script dinamicamente
+        function loadScript(url) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = url;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
 
-    <div id="exercise-container" class="cols"></div>
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Carregar o Supabase JS dinamicamente e ESPERAR por ele
+                await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.31.0/dist/supabase.min.js');
 
-    <div class="actions">
-      <button id="clear">Limpar marcações do dia</button>
-      <button id="export">Exportar JSON</button>
-      <button id="print" class="primary">Imprimir</button>
-    </div>
+                // AGORA que o Supabase está carregado, podemos inicializá-lo
+                const SUPABASE_URL = 'https://cnxnucmsrhpxnljdnhkb.supabase.co';
+                const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNueG51Y21zcmhweG5samRuaGtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4Mjc1MDYsImV4cCI6MjA3NDQwMzUwNn0.dFauZywzE_ZH5VKrD5y78rDGczOlO6NK1rySWCk12OQ';
+                const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    <div style="margin-top:12px">
-      <div class="progress"><div id="bar" class="bar"></div></div>
-    </div>
+                // O restante do seu código JavaScript vai aqui
+                // (todas as constantes, funções, eventos e inicialização)
 
-    <footer>Os dados são salvos localmente no seu navegador (localStorage).</footer>
-  </div>
+                const exercises = [
+                    {periodo:"Manhã", lista:[
+                        {key:"manha_mov_tornozelo", nome:"Mobilidade tornozelo (20 rep)", desc:"Mover o pé para cima e para baixo suavemente.", img:"1.png"},
+                        {key:"manha_circular_tornozelo", nome:"Movimento circular do tornozelo (10/lado)", desc:"Fazer círculos com o tornozelo, devagar, em cada direção.", img:"2.png"},
+                        {key:"manha_quad_iso", nome:"Quadríceps isométrico (10x 5s)", desc:"Deitado, contrair a coxa empurrando o joelho contra a cama.", img:"3.png"},
+                        {key:"manha_elevacao_perna", nome:"Elevação de perna apoiada (5-10x)", desc:"Elevar a perna esticada alguns cm da cama e segurar.", img:"3.png"}
+                    ]},
+                    {periodo:"Tarde", lista:[
+                        {key:"tarde_deslizar_calcanhar", nome:"Deslizar calcanhar (10-15x)", desc:"Deslizar o calcanhar para frente e para trás suavemente.", img:"4.png"},
+                        {key:"tarde_adutores_iso", nome:"Adutores isométricos (10x)", desc:"Apertar uma almofada entre os joelhos.", img:"5.png"},
+                        {key:"tarde_gluteo_iso", nome:"Glúteo isométrico (10x)", desc:"Contrair glúteos por alguns segundos e relaxar.", img:"6.png"},
+                        {key:"tarde_dedos_pe", nome:"Movimentar dedos do pé (20x)", desc:"Abrir e fechar os dedos do pé para ativar circulação.", img:"6.png"}
+                    ]},
+                    {periodo:"Noite", lista:[
+                        {key:"noite_along_isq", nome:"Alongamento leve isquiotibiais (3x 10s)", desc:"Usar toalha para puxar levemente a perna sem forçar joelho.", img:"7.png"},
+                        {key:"noite_deslizar_calcanhar", nome:"Deslizar calcanhar (10x)", desc:"Repetir o deslizar calcanhar.", img:"8.png"},
+                        {key:"noite_elev_travesseiros", nome:"Elevação com travesseiros (10-15 min)", desc:"Manter a perna elevada em travesseiros para reduzir inchaço.", img:"9.png"}
+                    ]}
+                ];
 
-  <script>
-    const exercises = [
-      {periodo:"Manhã", lista:[
-        {key:"manha_mov_tornozelo", nome:"Mobilidade tornozelo (20 rep)", desc:"Mover o pé para cima e para baixo suavemente.", img:"1.png"},
-        {key:"manha_circular_tornozelo", nome:"Movimento circular do tornozelo (10/lado)", desc:"Fazer círculos com o tornozelo, devagar, em cada direção.", img:"2.png"},
-        {key:"manha_quad_iso", nome:"Quadríceps isométrico (10x 5s)", desc:"Deitado, contrair a coxa empurrando o joelho contra a cama.", img:"0.png"},
-        {key:"manha_elevacao_perna", nome:"Elevação de perna apoiada (5-10x)", desc:"Elevar a perna esticada alguns cm da cama e segurar.", img:"4.png"}
-      ]},
-      {periodo:"Tarde", lista:[
-        {key:"tarde_deslizar_calcanhar", nome:"Deslizar calcanhar (10-15x)", desc:"Deslizar o calcanhar para frente e para trás suavemente.", img:"5.png"},
-        {key:"tarde_adutores_iso", nome:"Adutores isométricos (10x)", desc:"Apertar uma almofada entre os joelhos.", img:"6.png"},
-        {key:"tarde_gluteo_iso", nome:"Glúteo isométrico (10x)", desc:"Contrair glúteos por alguns segundos e relaxar.", img:"0.png"},
-        {key:"tarde_dedos_pe", nome:"Movimentar dedos do pé (20x)", desc:"Abrir e fechar os dedos do pé para ativar circulação.", img:"0.png"}
-      ]},
-      {periodo:"Noite", lista:[
-        {key:"noite_along_isq", nome:"Alongamento leve isquiotibiais (3x 10s)", desc:"Usar toalha para puxar levemente a perna sem forçar joelho.", img:"7 (2).png"},
-        {key:"noite_deslizar_calcanhar", nome:"Deslizar calcanhar (10x)", desc:"Repetir o deslizar calcanhar.", img:"8.png"},
-        {key:"noite_elev_travesseiros", nome:"Elevação com travesseiros (10-15 min)", desc:"Manter a perna elevada em travesseiros para reduzir inchaço.", img:"9.png"}
-      ]}
-    ];
+                const dateInput = document.getElementById('date');
+                const prevBtn = document.getElementById('prev');
+                const nextBtn = document.getElementById('next');
+                const clearBtn = document.getElementById('clear');
+                const exportBtn = document.getElementById('export');
+                const printBtn = document.getElementById('print');
+                const saveServerBtn = document.getElementById('saveServer');
+                const container = document.getElementById('exercise-container');
+                const countSpan = document.getElementById('count');
+                const totalSpan = document.getElementById('total');
+                const bar = document.getElementById('bar');
 
-    const dateInput = document.getElementById('date');
-    const prevBtn = document.getElementById('prev');
-    const nextBtn = document.getElementById('next');
-    const clearBtn = document.getElementById('clear');
-    const exportBtn = document.getElementById('export');
-    const printBtn = document.getElementById('print');
-    const container = document.getElementById('exercise-container');
-    const countSpan = document.getElementById('count');
-    const totalSpan = document.getElementById('total');
-    const bar = document.getElementById('bar');
+                function todayISO(){ const d = new Date(); d.setHours(0,0,0,0); return d.toISOString().slice(0,10); }
+                function setDate(d){ dateInput.value = d; loadForDate(d); }
 
-    function todayISO(){ const d = new Date(); d.setHours(0,0,0,0); return d.toISOString().slice(0,10); }
-    function setDate(d){ dateInput.value = d; loadForDate(d); }
+                function renderExercises(){
+                    container.innerHTML = '';
+                    exercises.forEach(grupo => {
+                        const div = document.createElement('div');
+                        div.className = 'card';
+                        const h2 = document.createElement('h2');
+                        h2.textContent = grupo.periodo;
+                        div.appendChild(h2);
+                        grupo.lista.forEach(ex => {
+                            const wrapper = document.createElement('div');
+                            const label = document.createElement('label');
+                            const cb = document.createElement('input');
+                            cb.type = 'checkbox';
+                            cb.dataset.key = ex.key;
+                            label.appendChild(cb);
+                            const span = document.createElement('span');
+                            span.textContent = ex.nome;
+                            span.style.textDecoration = 'underline';
+                            span.style.color = '#0077cc';
+                            span.style.cursor = 'pointer';
+                            span.addEventListener('click', ()=>{
+                                const info = wrapper.querySelector('.exercise-info');
+                                info.style.display = info.style.display==='block' ? 'none':'block';
+                            });
+                            label.appendChild(span);
+                            wrapper.appendChild(label);
+                            const info = document.createElement('div');
+                            info.className = 'exercise-info';
+                            info.innerHTML = `<p>${ex.desc}</p><img src="/imagens/${ex.img}" alt="${ex.nome}">`;
+                            wrapper.appendChild(info);
+                            div.appendChild(wrapper);
+                        });
+                        container.appendChild(div);
+                    });
+                }
 
-    function renderExercises(){
-      container.innerHTML = '';
-      exercises.forEach(grupo => {
-        const div = document.createElement('div');
-        div.className = 'card';
-        const h2 = document.createElement('h2');
-        h2.textContent = grupo.periodo;
-        div.appendChild(h2);
-        grupo.lista.forEach(ex => {
-          const wrapper = document.createElement('div');
-          const label = document.createElement('label');
-          const cb = document.createElement('input');
-          cb.type = 'checkbox';
-          cb.dataset.key = ex.key;
-          label.appendChild(cb);
-          const span = document.createElement('span');
-          span.textContent = ex.nome;
-          span.style.textDecoration = 'underline';
-          span.style.color = '#0077cc';
-          span.style.cursor = 'pointer';
-          span.addEventListener('click', ()=>{
-            const info = wrapper.querySelector('.exercise-info');
-            info.style.display = info.style.display==='block' ? 'none':'block';
-          });
-          label.appendChild(span);
-          wrapper.appendChild(label);
-          const info = document.createElement('div');
-          info.className = 'exercise-info';
-          info.innerHTML = `<p>${ex.desc}</p><img src="${ex.img}" alt="${ex.nome}">`;
-          wrapper.appendChild(info);
-          div.appendChild(wrapper);
-        });
-        container.appendChild(div);
-      });
-    }
+                function loadForDate(date){
+                    const key = 'fisio_' + date;
+                    const saved = JSON.parse(localStorage.getItem(key) || '{}');
+                    document.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+                        cb.checked = !!saved[cb.dataset.key];
+                    });
+                    updateProgress();
+                    loadFromSupabase(date);
+                }
 
-    function loadForDate(date){
-      const key = 'fisio_' + date;
-      const saved = JSON.parse(localStorage.getItem(key) || '{}');
-      document.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
-        cb.checked = !!saved[cb.dataset.key];
-      });
-      updateProgress();
-    }
+                function saveForDate(date){
+                    const key = 'fisio_' + date;
+                    const obj = {};
+                    document.querySelectorAll('input[type="checkbox"]').forEach(cb=> obj[cb.dataset.key] = cb.checked);
+                    localStorage.setItem(key, JSON.stringify(obj));
+                    updateProgress();
+                }
 
-    function saveForDate(date){
-      const key = 'fisio_' + date;
-      const obj = {};
-      document.querySelectorAll('input[type="checkbox"]').forEach(cb=> obj[cb.dataset.key] = cb.checked);
-      localStorage.setItem(key, JSON.stringify(obj));
-      updateProgress();
-    }
+                function updateProgress(){
+                    const checkboxes = Array.from(document.querySelectorAll('input[type="checkbox"][data-key]'));
+                    const total = checkboxes.length;
+                    const done = checkboxes.filter(cb => cb.checked).length;
+                    countSpan.textContent = done;
+                    totalSpan.textContent = total;
+                    bar.style.width = Math.round((done/total)*100) + '%';
+                }
 
-    function updateProgress(){
-      const checkboxes = Array.from(document.querySelectorAll('input[type="checkbox"][data-key]'));
-      const total = checkboxes.length;
-      const done = checkboxes.filter(cb => cb.checked).length;
-      countSpan.textContent = done;
-      totalSpan.textContent = total;
-      bar.style.width = Math.round((done/total)*100) + '%';
-    }
+                async function saveToSupabase(date){
+                    const key = 'fisio_' + date;
+                    const saved = JSON.parse(localStorage.getItem(key) || '{}');
 
-    // Eventos
-    document.addEventListener('change', e=>{
-      if(e.target.matches('input[type="checkbox"][data-key]')){
-        saveForDate(dateInput.value);
-      }
-    });
+                    try {
+                        const { data: existing, error: selectError } = await supabase
+                            .from('exercicios')
+                            .select('id')
+                            .eq('data', date)
+                            .limit(1);
 
-    dateInput.addEventListener('change', ()=> loadForDate(dateInput.value));
-    prevBtn.addEventListener('click', ()=> {
-      const d = new Date(dateInput.value); d.setDate(d.getDate()-1); setDate(d.toISOString().slice(0,10));
-    });
-    nextBtn.addEventListener('click', ()=> {
-      const d = new Date(dateInput.value); d.setDate(d.getDate()+1); setDate(d.toISOString().slice(0,10));
-    });
+                        if (selectError) throw selectError;
 
-    clearBtn.addEventListener('click', ()=>{
-      if(!confirm('Limpar todas as marcas deste dia?')) return;
-      document.querySelectorAll('input[type="checkbox"]').forEach(cb=>cb.checked=false);
-      saveForDate(dateInput.value);
-    });
+                        if(existing.length > 0){
+                            const { error: updateError } = await supabase
+                                .from('exercicios')
+                                .update({ json_data: saved })
+                                .eq('data', date);
+                            if (updateError) throw updateError;
+                        } else {
+                            const { error: insertError } = await supabase
+                                .from('exercicios')
+                                .insert([{ data: date, json_data: saved }]);
+                            if (insertError) throw insertError;
+                        }
+                        alert('Progresso salvo no servidor!');
+                    } catch (error) {
+                        console.error('Erro ao salvar no Supabase:', error);
+                        alert('Erro ao salvar no servidor: ' + error.message);
+                    }
+                }
 
-    exportBtn.addEventListener('click', ()=>{
-      const date = dateInput.value;
-      const key = 'fisio_' + date;
-      const saved = JSON.parse(localStorage.getItem(key) || '{}');
-      const blob = new Blob([JSON.stringify(saved,null,2)],{type:'application/json'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = `fisioterapia_${date}.json`; a.click(); URL.revokeObjectURL(url);
-    });
+                async function loadFromSupabase(date){
+                    try {
+                        const { data, error } = await supabase
+                            .from('exercicios')
+                            .select('json_data')
+                            .eq('data', date)
+                            .limit(1);
 
-    printBtn.addEventListener('click', ()=> window.print());
+                        if (error) throw error;
 
-    // Inicialização
-    renderExercises();
-    dateInput.value = todayISO();
-    loadForDate(dateInput.value);
-  </script>
+                        if(data && data.length > 0){
+                            const saved = data[0].json_data;
+                            document.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+                                cb.checked = !!saved[cb.dataset.key];
+                            });
+                        } else {
+                            document.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+                                cb.checked = false;
+                            });
+                        }
+                        updateProgress();
+                    } catch (error) {
+                        console.error('Erro ao carregar do Supabase:', error);
+                        alert('Erro ao carregar do servidor: ' + error.message);
+                    }
+                }
+
+                document.addEventListener('change', e=>{
+                    if(e.target.matches('input[type="checkbox"][data-key]')){
+                        saveForDate(dateInput.value);
+                    }
+                });
+
+                dateInput.addEventListener('change', ()=> loadForDate(dateInput.value));
+                prevBtn.addEventListener('click', ()=> {
+                    const d = new Date(dateInput.value); d.setDate(d.getDate()-1); setDate(d.toISOString().slice(0,10));
+                });
+                nextBtn.addEventListener('click', ()=> {
+                    const d = new Date(dateInput.value); d.setDate(d.getDate()+1); setDate(d.toISOString().slice(0,10));
+                });
+
+                clearBtn.addEventListener('click', ()=>{
+                    if(!confirm('Limpar todas as marcas deste dia?')) return;
+                    document.querySelectorAll('input[type="checkbox"]').forEach(cb=>cb.checked=false);
+                    saveForDate(dateInput.value);
+                });
+
+                exportBtn.addEventListener('click', ()=>{
+                    const date = dateInput.value;
+                    const key = 'fisio_' + date;
+                    const saved = JSON.parse(localStorage.getItem(key) || '{}');
+                    const blob = new Blob([JSON.stringify(saved,null,2)],{type:'application/json'});
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href = url; a.download = `fisioterapia_${date}.json`; a.click(); URL.revokeObjectURL(url);
+                });
+
+                printBtn.addEventListener('click', ()=> window.print());
+                saveServerBtn.addEventListener('click', ()=> saveToSupabase(dateInput.value));
+
+                // Inicialização (após Supabase estar garantidamente carregado)
+                renderExercises();
+                dateInput.value = todayISO();
+                loadForDate(dateInput.value);
+
+            } catch (error) {
+                console.error('Erro fatal ao inicializar o aplicativo:', error);
+                alert('Ocorreu um erro crítico ao carregar o aplicativo. Tente novamente mais tarde.');
+            }
+        }); // Fecha o DOMContentLoaded
+    </script>
 </body>
 </html>
