@@ -1,110 +1,193 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Checklist Fisioterapia Platô Tibial</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Checklist Fisioterapia - Platô Tibial (sem carga)</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    h1 { text-align: center; }
-    .exercise { margin: 10px 0; }
-    .details { display: none; margin-left: 20px; }
-    button { margin-top: 20px; padding: 10px; }
+    :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;}
+    body{max-width:900px;margin:24px auto;padding:18px;border-radius:10px;background:#fbfbfc;color:#111}
+    h1,h2{margin:6px 0}
+    .card{background:#fff;border:1px solid #e6e6e9;padding:14px;border-radius:10px;margin:10px 0;box-shadow:0 6px 18px rgba(20,20,40,0.03)}
+    .row{display:flex;gap:8px;align-items:center}
+    .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+    label{display:flex;gap:10px;align-items:center;cursor:pointer}
+    input[type='checkbox']{width:18px;height:18px}
+    button{padding:8px 12px;border-radius:8px;border:1px solid #ccc;background:#f5f5f7;cursor:pointer}
+    .primary{background:#0077cc;color:white;border-color:#0077cc}
+    .muted{color:#555;font-size:0.95rem}
+    .small{font-size:0.9rem}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .progress{height:12px;background:#eee;border-radius:8px;overflow:hidden}
+    .bar{height:100%;background:linear-gradient(90deg,#6bc8a4,#2a9df4);width:0}
+    footer{margin-top:14px;font-size:0.85rem;color:#666}
+    .exercise-info{display:none;margin-top:6px;font-size:0.9rem;color:#333}
+    .exercise-info img{max-width:100%;border-radius:8px;margin-top:6px}
   </style>
 </head>
 <body>
-  <h1>Checklist Fisioterapia Platô Tibial</h1>
-  <div id="exercises"></div>
-  <button onclick="downloadJSON()">Salvar Progresso</button>
-  <input type="file" id="fileInput" />
+  <h1>Checklist Diário - Fisioterapia (sem carga)</h1>
+  <p class="muted">Registre os exercícios conforme o plano inicial até avaliação com o fisioterapeuta. Clique no nome do exercício para ver explicação e imagem.</p>
+
+  <div class="card">
+    <div class="row">
+      <label for="date">Data:</label>
+      <input id="date" type="date" />
+      <button id="prev">←</button>
+      <button id="next">→</button>
+      <div style="margin-left:auto" class="small">Progresso do dia: <span id="count">0</span>/<span id="total">0</span></div>
+    </div>
+
+    <hr />
+
+    <div id="exercise-container" class="cols"></div>
+
+    <div class="actions">
+      <button id="clear">Limpar marcações do dia</button>
+      <button id="export">Exportar JSON</button>
+      <button id="print" class="primary">Imprimir</button>
+    </div>
+
+    <div style="margin-top:12px">
+      <div class="progress"><div id="bar" class="bar"></div></div>
+    </div>
+
+    <footer>Os dados são salvos localmente no seu navegador (localStorage).</footer>
+  </div>
+
   <script>
-    let data = {};
+    const exercises = [
+      {periodo:"Manhã", lista:[
+        {key:"manha_mov_tornozelo", nome:"Mobilidade tornozelo (20 rep)", desc:"Mover o pé para cima e para baixo suavemente.", img:"https://seu-usuario.github.io/fisioterapia-checklist/imagens/1.png"},
+        {key:"manha_circular_tornozelo", nome:"Movimento circular do tornozelo (10/lado)", desc:"Fazer círculos com o tornozelo, devagar, em cada direção.", img:"https://seu-usuario.github.io/fisioterapia-checklist/imagens/2.png"},
+        {key:"manha_quad_iso", nome:"Quadríceps isométrico (10x 5s)", desc:"Deitado, contrair a coxa empurrando o joelho contra a cama.", img:"https://seu-usuario.github.io/fisioterapia-checklist/imagens/3.png"},
+        {key:"manha_elevacao_perna", nome:"Elevação de perna apoiada (5-10x)", desc:"Elevar a perna esticada alguns cm da cama e segurar.", img:"https://seu-usuario.github.io/fisioterapia-checklist/imagens/3.png"}
+      ]},
+      {periodo:"Tarde", lista:[
+        {key:"tarde_deslizar_calcanhar", nome:"Deslizar calcanhar (10-15x)", desc:"Deslizar o calcanhar para frente e para trás suavemente.", img:"https://seu-usuario.github.io/fisioterapia-checklist/imagens/4.png"},
+        {key:"tarde_adutores_iso", nome:"Adutores isométricos (10x)", desc:"Apertar uma almofada entre os joelhos.", img:"https://seu-usuario.github.io/fisioterapia-checklist/imagens/5.png"},
+        {key:"tarde_gluteo_iso", nome:"Glúteo isométrico (10x)", desc:"Contrair glúteos por alguns segundos e relaxar.", img:"https://seu-usuario.github.io/fisioterapia-checklist/imagens/6.png"},
+        {key:"tarde_dedos_pe", nome:"Movimentar dedos do pé (20x)", desc:"Abrir e fechar os dedos do pé para ativar circulação.", img:"https://seu-usuario.github.io/fisioterapia-checklist/imagens/6.png"}
+      ]},
+      {periodo:"Noite", lista:[
+        {key:"noite_along_isq", nome:"Alongamento leve isquiotibiais (3x 10s)", desc:"Usar toalha para puxar levemente a perna sem forçar joelho.", img:"https://seu-usuario.github.io/fisioterapia-checklist/imagens/7.png"},
+        {key:"noite_deslizar_calcanhar", nome:"Deslizar calcanhar (10x)", desc:"Repetir o deslizar calcanhar.", img:"https://seu-usuario.github.io/fisioterapia-checklist/imagens/8.png"},
+        {key:"noite_elev_travesseiros", nome:"Elevação com travesseiros (10-15 min)", desc:"Manter a perna elevada em travesseiros para reduzir inchaço.", img:"https://seu-usuario.github.io/fisioterapia-checklist/imagens/9.png"}
+      ]}
+    ];
 
-    async function loadExercises() {
-      const response = await fetch('exercicios.json');
-      data = await response.json();
-      const container = document.getElementById('exercises');
+    const dateInput = document.getElementById('date');
+    const prevBtn = document.getElementById('prev');
+    const nextBtn = document.getElementById('next');
+    const clearBtn = document.getElementById('clear');
+    const exportBtn = document.getElementById('export');
+    const printBtn = document.getElementById('print');
+    const container = document.getElementById('exercise-container');
+    const countSpan = document.getElementById('count');
+    const totalSpan = document.getElementById('total');
+    const bar = document.getElementById('bar');
+
+    function todayISO(){ const d = new Date(); d.setHours(0,0,0,0); return d.toISOString().slice(0,10); }
+    function setDate(d){ dateInput.value = d; loadForDate(d); }
+
+    function renderExercises(){
       container.innerHTML = '';
-      data.exercicios.forEach((ex, i) => {
+      exercises.forEach(grupo => {
         const div = document.createElement('div');
-        div.className = 'exercise';
-        div.innerHTML = `
-          <label>
-            <input type="checkbox" onchange="toggleCheck(${i})" ${ex.feito ? 'checked' : ''}>
-            <span onclick="toggleDetails(${i})" style="cursor:pointer;color:blue;text-decoration:underline;">${ex.nome}</span>
-          </label>
-          <div class="details" id="details-${i}">
-            <p>${ex.descricao}</p>
-            <img src="${ex.imagem}" alt="${ex.nome}" style="max-width:200px;">
-          </div>
-        `;
+        div.className = 'card';
+        const h2 = document.createElement('h2');
+        h2.textContent = grupo.periodo;
+        div.appendChild(h2);
+        grupo.lista.forEach(ex => {
+          const wrapper = document.createElement('div');
+          const label = document.createElement('label');
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.dataset.key = ex.key;
+          label.appendChild(cb);
+          const span = document.createElement('span');
+          span.textContent = ex.nome;
+          span.style.textDecoration = 'underline';
+          span.style.color = '#0077cc';
+          span.style.cursor = 'pointer';
+          span.addEventListener('click', ()=>{
+            const info = wrapper.querySelector('.exercise-info');
+            info.style.display = info.style.display==='block' ? 'none':'block';
+          });
+          label.appendChild(span);
+          wrapper.appendChild(label);
+          const info = document.createElement('div');
+          info.className = 'exercise-info';
+          info.innerHTML = `<p>${ex.desc}</p><img src="${ex.img}" alt="${ex.nome}">`;
+          wrapper.appendChild(info);
+          div.appendChild(wrapper);
+        });
         container.appendChild(div);
       });
     }
 
-    function toggleCheck(i) {
-      data.exercicios[i].feito = !data.exercicios[i].feito;
-      saveLocal();
+    function loadForDate(date){
+      const key = 'fisio_' + date;
+      const saved = JSON.parse(localStorage.getItem(key) || '{}');
+      document.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+        cb.checked = !!saved[cb.dataset.key];
+      });
+      updateProgress();
     }
 
-    function toggleDetails(i) {
-      const d = document.getElementById('details-' + i);
-      d.style.display = d.style.display === 'block' ? 'none' : 'block';
+    function saveForDate(date){
+      const key = 'fisio_' + date;
+      const obj = {};
+      document.querySelectorAll('input[type="checkbox"]').forEach(cb=> obj[cb.dataset.key] = cb.checked);
+      localStorage.setItem(key, JSON.stringify(obj));
+      updateProgress();
     }
 
-    function saveLocal() {
-      localStorage.setItem('exercicios', JSON.stringify(data));
+    function updateProgress(){
+      const checkboxes = Array.from(document.querySelectorAll('input[type="checkbox"][data-key]'));
+      const total = checkboxes.length;
+      const done = checkboxes.filter(cb => cb.checked).length;
+      countSpan.textContent = done;
+      totalSpan.textContent = total;
+      bar.style.width = Math.round((done/total)*100) + '%';
     }
 
-    function loadLocal() {
-      const saved = localStorage.getItem('exercicios');
-      if (saved) {
-        data = JSON.parse(saved);
-        render();
+    // Eventos
+    document.addEventListener('change', e=>{
+      if(e.target.matches('input[type="checkbox"][data-key]')){
+        saveForDate(dateInput.value);
       }
-    }
-
-    function render() {
-      const container = document.getElementById('exercises');
-      container.innerHTML = '';
-      data.exercicios.forEach((ex, i) => {
-        const div = document.createElement('div');
-        div.className = 'exercise';
-        div.innerHTML = `
-          <label>
-            <input type="checkbox" onchange="toggleCheck(${i})" ${ex.feito ? 'checked' : ''}>
-            <span onclick="toggleDetails(${i})" style="cursor:pointer;color:blue;text-decoration:underline;">${ex.nome}</span>
-          </label>
-          <div class="details" id="details-${i}">
-            <p>${ex.descricao}</p>
-            <img src="${ex.imagem}" alt="${ex.nome}" style="max-width:200px;">
-          </div>
-        `;
-        container.appendChild(div);
-      });
-    }
-
-    function downloadJSON() {
-      const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'exercicios.json';
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-
-    document.getElementById('fileInput').addEventListener('change', function(evt) {
-      const file = evt.target.files[0];
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        data = JSON.parse(e.target.result);
-        render();
-        saveLocal();
-      };
-      reader.readAsText(file);
     });
 
-    loadExercises();
+    dateInput.addEventListener('change', ()=> loadForDate(dateInput.value));
+    prevBtn.addEventListener('click', ()=> {
+      const d = new Date(dateInput.value); d.setDate(d.getDate()-1); setDate(d.toISOString().slice(0,10));
+    });
+    nextBtn.addEventListener('click', ()=> {
+      const d = new Date(dateInput.value); d.setDate(d.getDate()+1); setDate(d.toISOString().slice(0,10));
+    });
+
+    clearBtn.addEventListener('click', ()=>{
+      if(!confirm('Limpar todas as marcas deste dia?')) return;
+      document.querySelectorAll('input[type="checkbox"]').forEach(cb=>cb.checked=false);
+      saveForDate(dateInput.value);
+    });
+
+    exportBtn.addEventListener('click', ()=>{
+      const date = dateInput.value;
+      const key = 'fisio_' + date;
+      const saved = JSON.parse(localStorage.getItem(key) || '{}');
+      const blob = new Blob([JSON.stringify(saved,null,2)],{type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `fisioterapia_${date}.json`; a.click(); URL.revokeObjectURL(url);
+    });
+
+    printBtn.addEventListener('click', ()=> window.print());
+
+    // Inicialização
+    renderExercises();
+    dateInput.value = todayISO();
+    loadForDate(dateInput.value);
   </script>
 </body>
 </html>
