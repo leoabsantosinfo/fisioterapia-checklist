@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Checklist Fisioterapia Platô Tibial</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1 { text-align: center; }
+    .exercise { margin: 10px 0; }
+    .details { display: none; margin-left: 20px; }
+    button { margin-top: 20px; padding: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Checklist Fisioterapia Platô Tibial</h1>
+  <div id="exercises"></div>
+  <button onclick="downloadJSON()">Salvar Progresso</button>
+  <input type="file" id="fileInput" />
+  <script>
+    let data = {};
+
+    async function loadExercises() {
+      const response = await fetch('exercicios.json');
+      data = await response.json();
+      const container = document.getElementById('exercises');
+      container.innerHTML = '';
+      data.exercicios.forEach((ex, i) => {
+        const div = document.createElement('div');
+        div.className = 'exercise';
+        div.innerHTML = `
+          <label>
+            <input type="checkbox" onchange="toggleCheck(${i})" ${ex.feito ? 'checked' : ''}>
+            <span onclick="toggleDetails(${i})" style="cursor:pointer;color:blue;text-decoration:underline;">${ex.nome}</span>
+          </label>
+          <div class="details" id="details-${i}">
+            <p>${ex.descricao}</p>
+            <img src="${ex.imagem}" alt="${ex.nome}" style="max-width:200px;">
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function toggleCheck(i) {
+      data.exercicios[i].feito = !data.exercicios[i].feito;
+      saveLocal();
+    }
+
+    function toggleDetails(i) {
+      const d = document.getElementById('details-' + i);
+      d.style.display = d.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function saveLocal() {
+      localStorage.setItem('exercicios', JSON.stringify(data));
+    }
+
+    function loadLocal() {
+      const saved = localStorage.getItem('exercicios');
+      if (saved) {
+        data = JSON.parse(saved);
+        render();
+      }
+    }
+
+    function render() {
+      const container = document.getElementById('exercises');
+      container.innerHTML = '';
+      data.exercicios.forEach((ex, i) => {
+        const div = document.createElement('div');
+        div.className = 'exercise';
+        div.innerHTML = `
+          <label>
+            <input type="checkbox" onchange="toggleCheck(${i})" ${ex.feito ? 'checked' : ''}>
+            <span onclick="toggleDetails(${i})" style="cursor:pointer;color:blue;text-decoration:underline;">${ex.nome}</span>
+          </label>
+          <div class="details" id="details-${i}">
+            <p>${ex.descricao}</p>
+            <img src="${ex.imagem}" alt="${ex.nome}" style="max-width:200px;">
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function downloadJSON() {
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'exercicios.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('fileInput').addEventListener('change', function(evt) {
+      const file = evt.target.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        data = JSON.parse(e.target.result);
+        render();
+        saveLocal();
+      };
+      reader.readAsText(file);
+    });
+
+    loadExercises();
+  </script>
+</body>
+</html>

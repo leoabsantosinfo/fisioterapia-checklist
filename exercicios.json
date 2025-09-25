@@ -1,0 +1,22 @@
+{
+  "exercicios": [
+    {
+      "nome": "Mobilidade de Tornozelo",
+      "descricao": "Movimente o tornozelo para cima e para baixo lentamente, 10 repetições.",
+      "imagem": "imagens/tornozelo.png",
+      "feito": false
+    },
+    {
+      "nome": "Quadríceps Isométrico",
+      "descricao": "Contraia a coxa empurrando a parte de trás do joelho contra a cama, segure por 5 segundos.",
+      "imagem": "imagens/quadriceps.png",
+      "feito": false
+    },
+    {
+      "nome": "Elevação de Perna Esticada",
+      "descricao": "Deitado, levante a perna operada reta até alinhar com o quadril, 10 repetições.",
+      "imagem": "imagens/perna.png",
+      "feito": false
+    }
+  ]
+}
